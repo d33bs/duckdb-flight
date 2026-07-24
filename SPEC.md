@@ -1,8 +1,6 @@
 # flight SQL Specification
 
-This document is the release-facing contract for the DuckDB `flight` extension.
-It should stay close to the implementation and should be updated before any
-community-extension release changes the public SQL surface.
+This document defines the public SQL behavior for the DuckDB `flight` extension.
 
 ## Extension Identity
 
@@ -36,7 +34,7 @@ descriptor.
 
 ## Shared Options
 
-The first release supports a small named-option set:
+Named options:
 
 - `bearer_token := 'token'` sends `authorization: Bearer token`.
 - `authorization_header := 'Basic ...'` sends an explicit authorization value.
@@ -44,9 +42,6 @@ The first release supports a small named-option set:
 - `timeout_ms := 30000` sets connect and RPC timeouts in milliseconds.
 
 `authorization_header` wins when both auth options are supplied.
-
-Planned options include custom TLS roots, hostname override, DuckDB secrets
-integration, and development-only TLS verification controls.
 
 ## Table Functions
 
@@ -122,7 +117,7 @@ Returns one row per Arrow field:
 | `field_index` | `BIGINT` | Field position. |
 | `field_name` | `VARCHAR` | Arrow field name. |
 | `arrow_type` | `VARCHAR` | Arrow datatype display. |
-| `duckdb_type` | `VARCHAR` | Planned DuckDB logical type display. |
+| `duckdb_type` | `VARCHAR` | DuckDB logical type display. |
 | `nullable` | `BOOLEAN` | Arrow nullability flag. |
 | `metadata` | `VARCHAR` | Field metadata display. |
 | `supported` | `BOOLEAN` | Whether the current bridge expects to scan it. |
@@ -143,7 +138,7 @@ FROM flight_scan(
 
 `flight` is a friendly alias over `flight_scan` for path descriptors. Both bind
 the result schema from `FlightInfo`, then stream endpoint tickets during
-execution. Multi-endpoint scans are currently consumed sequentially.
+execution. Multi-endpoint scans are consumed sequentially.
 
 ### `flight_scan_ticket`
 
@@ -166,27 +161,23 @@ FROM flight_scan_ticket(
 
 Ticket scans stream when `schema_descriptor` is supplied, because DuckDB needs a
 bind-time schema. A bare ticket can still scan, but it prebuffers the stream to
-discover schema and should not be used for large results.
+discover schema; avoid bare ticket scans for large results.
 
 `ticket_encoding` defaults to `utf8`. Use `hex` or `base64` when a service
 returns opaque/non-text tickets. `flight_info.ticket_hex` is the safest value to
 copy into `flight_scan_ticket(..., ticket_encoding := 'hex')`.
 
-## Current Type Contract
+## Type Coverage
 
 The implementation relies on the DuckDB Rust/Arrow bridge for conversion. The
-release test suite currently exercises booleans, signed integers, floats,
-UTF-8 strings, dates, timestamps, nulls, and grouped analytical queries over
-real Arrow Flight streams. The protocol tests also cover binary endpoint
-tickets, because Arrow Flight tickets are opaque bytes rather than strings.
+test suite exercises booleans, signed integers, floats, UTF-8 strings, dates,
+timestamps, nulls, and grouped analytical queries over real Arrow Flight
+streams. Protocol tests cover binary endpoint tickets because Arrow Flight
+tickets are opaque bytes rather than strings.
 
-Before a broader v0.1 release, the type-support table should be expanded with
-explicit pass/fail coverage for unsigned integers, decimals, binary values,
-lists, structs, dictionaries, and timestamps with time zones.
+## Errors
 
-## Reliability Contract
-
-The extension should fail with actionable DuckDB errors for:
+The extension returns DuckDB errors for:
 
 - Invalid locations or unsupported URI schemes.
 - Missing descriptors or tickets.
@@ -194,7 +185,3 @@ The extension should fail with actionable DuckDB errors for:
 - Authentication or TLS failures.
 - Unsupported Arrow fields selected by a scan.
 - Interrupted streams.
-
-The first release should not claim Flight SQL, writes, broad pushdown, global
-connection pooling, or zero-copy behavior until those features are implemented
-and tested.

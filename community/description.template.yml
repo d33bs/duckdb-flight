@@ -20,4 +20,4 @@ docs:
     FROM flight('grpc://localhost:5005', ['warehouse', 'events'])
     LIMIT 5;
   extended_description: |
-    `flight` lets DuckDB query Arrow Flight services with normal SQL. It is useful when data should stay behind a service boundary, such as governed data products, remote query engines, cross-cloud datasets, or partitioned Flight endpoints. Use native DuckDB scans when DuckDB should read the files directly; use `flight` when a service should deliver Arrow batches.
+    `flight` lets DuckDB query Arrow Flight services with normal SQL. It is useful when data stays behind a service boundary, such as governed data products, remote query engines, cross-cloud datasets, or partitioned Flight endpoints. Use native DuckDB scans when DuckDB reads the files directly; use `flight` when a service delivers Arrow batches.

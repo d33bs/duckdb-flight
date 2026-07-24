@@ -1,30 +1,43 @@
-# Community Extension Release Notes
+# Community Extension Release
 
 This repository is named and built as the DuckDB extension `flight`.
 
-## Current Answer
+## Install Name
 
-If this repository were published today, the extension binary and SQL load name
-are prepared for:
+The extension installs and loads as:
 
 ```sql
 INSTALL flight FROM community;
 LOAD flight;
 ```
 
-The remaining release blockers are external to the local build:
+## Community Descriptor
 
-- Publish the repository publicly on GitHub.
-- Replace `TODO_OWNER/TODO_REPO`, `TODO_RELEASE_COMMIT_SHA`, and maintainers in
-  `community/description.template.yml`.
-- Open a PR to `duckdb/community-extensions` adding that descriptor as
-  `extensions/flight/description.yml`.
-- Confirm the community CI accepts the Rust `cargo` build for the pinned DuckDB
-  version and excluded platforms.
+The descriptor template lives at `community/description.template.yml`. Render a
+submission descriptor with the release ref, GitHub repository, and maintainer:
+
+```sh
+python3 scripts/render_community_descriptor.py \
+  --ref v0.1.0 \
+  --github OWNER/REPO \
+  --maintainer GITHUB_USERNAME
+```
+
+The generated descriptor path is:
+
+```text
+build/community-extensions/extensions/flight/description.yml
+```
+
+Submit that file to the DuckDB Community Extensions Repository as:
+
+```text
+extensions/flight/description.yml
+```
 
 ## Local Release Checks
 
-Run these before cutting a community-extension PR:
+Run:
 
 ```sh
 python3 scripts/check_release_ready.py
@@ -38,25 +51,10 @@ make release
 make test_release
 ```
 
-## Descriptor Source
-
-Use `community/description.template.yml` as the starting point for the Community
-Extensions Repository descriptor. The format follows the current Rust community
-extension example, including `build: cargo` and `requires_toolchains:
-"rust;python3"`.
-
-Render a submission-ready descriptor for a release tag or commit hash:
+Validate the rendered descriptor:
 
 ```sh
-python3 scripts/render_community_descriptor.py \
-  --ref v0.1.0 \
-  --github OWNER/REPO \
-  --maintainer GITHUB_USERNAME
-
 python3 scripts/check_release_ready.py \
   --description-path build/community-extensions/extensions/flight/description.yml \
   --strict-community-ref
 ```
-
-The generated file belongs in the Community Extensions Repository at
-`extensions/flight/description.yml`.

@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="docs/assets/duckdb-flight-logo.png" alt="duckdb-flight logo" width="160">
-</p>
+<img src="docs/assets/duckdb-flight-logo.png" alt="duckdb-flight logo" width="160">
 
 # flight
 

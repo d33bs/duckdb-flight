@@ -11,6 +11,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSION_NAME = "flight"
+REQUIRED_EXCLUDED_PLATFORMS = [
+    "wasm_mvp",
+    "wasm_eh",
+    "wasm_threads",
+    "windows_amd64",
+    "windows_amd64_rtools",
+    "windows_amd64_mingw",
+    "linux_amd64_musl",
+]
 
 
 def read(path: str) -> str:
@@ -34,6 +43,10 @@ def duckdb_crate_version(duckdb_version: str) -> str:
 
 def has_todo_value(text: str) -> bool:
     return bool(re.search(r"\bTODO[_A-Z0-9]*\b", text))
+
+
+def split_semicolon_list(value: str) -> set[str]:
+    return {part for part in value.split(";") if part}
 
 
 def main() -> int:
@@ -98,6 +111,11 @@ def main() -> int:
             r"^\s*duckdb_version:\s*(v\d+\.\d+\.\d+)$",
             workflow,
             "workflow duckdb_version",
+        )
+        workflow_exclude_archs = first_match(
+            r"^\s*exclude_archs:\s*['\"]([^'\"]+)['\"]\s*$",
+            workflow,
+            "workflow exclude_archs",
         )
         cargo_duckdb = first_match(
             r'duckdb\s*=\s*\{\s*version\s*=\s*"=([0-9]+\.[0-9]+\.[0-9]+)"',
@@ -173,6 +191,21 @@ def main() -> int:
             else:
                 warnings.append(message)
 
+        workflow_exclusions = split_semicolon_list(workflow_exclude_archs)
+        descriptor_exclusions = split_semicolon_list(
+            first_match(
+                r'^\s*excluded_platforms:\s*["\']([^"\']+)["\']\s*$',
+                description,
+                "description excluded_platforms",
+            )
+        )
+        if workflow_exclusions != descriptor_exclusions:
+            failures.append(
+                "platform exclusion drift: "
+                f"workflow has {sorted(workflow_exclusions)}, "
+                f"description has {sorted(descriptor_exclusions)}"
+            )
+
     descriptor_checks = {
         "extension.language": r"^\s*language:\s*Rust\s*$",
         "extension.build": r"^\s*build:\s*cargo\s*$",
@@ -183,13 +216,12 @@ def main() -> int:
         if re.search(pattern, description, re.MULTILINE) is None:
             failures.append(f"{args.description_path} missing or incorrect {label}")
 
-    required_exclusions = ["wasm_mvp", "wasm_eh", "wasm_threads", "linux_amd64_musl"]
     excluded_platforms = first_match(
         r'^\s*excluded_platforms:\s*["\']([^"\']+)["\']\s*$',
         description,
         "description excluded_platforms",
     )
-    for platform in required_exclusions:
+    for platform in REQUIRED_EXCLUDED_PLATFORMS:
         if platform not in excluded_platforms.split(";"):
             failures.append(f"{args.description_path} missing excluded platform {platform}")
 

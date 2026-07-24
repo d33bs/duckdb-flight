@@ -1,0 +1,16 @@
+# name: test/sql/flight_check.test
+# description: smoke test flight diagnostic behavior
+# group: [flight]
+
+statement error
+SELECT * FROM flight_check('fixture://events');
+----
+Catalog Error
+
+require flight
+
+query TTTT
+SELECT check_name, status, message, detail FROM flight_check('fixture://events') ORDER BY check_name;
+----
+connect	ok	fixture service available	fixture://events
+schema	ok	4 fields	event_id,event_type,amount,created_at

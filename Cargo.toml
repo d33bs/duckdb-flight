@@ -1,0 +1,36 @@
+[package]
+name = "flight"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+strip = true
+
+[[example]]
+# crate-type can't be (at the moment) be overriden for specific targets
+# src/wasm_lib.rs forwards to src/lib.rs so that we can change from cdylib
+# (that is needed while compiling natively) to staticlib (needed since the
+# actual linking will be done via emcc
+name = "flight"
+path = "src/wasm_lib.rs"
+crate-type = ["staticlib"]
+
+[dependencies]
+duckdb = { version = "=1.10504.0", features = ["loadable-extension", "vscalar"] }
+arrow-array = "58.0.0"
+arrow-flight = { version = "58.0.0", features = ["tls-native-roots"] }
+arrow-schema = "58.0.0"
+base64 = "0.22"
+bytes = "1"
+futures = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+tonic = "0.14.1"
+
+[dev-dependencies]
+arrow-ipc = "58.0.0"
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
+tokio-stream = { version = "0.1", features = ["net"] }

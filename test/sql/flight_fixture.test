@@ -1,0 +1,162 @@
+# name: test/sql/flight_fixture.test
+# description: fixture-backed flight metadata and scan behavior
+# group: [flight]
+
+require flight
+
+query TTIIIT
+SELECT descriptor_type, descriptor, endpoint_count, total_records, total_bytes, ordered::VARCHAR
+FROM flight_list('fixture://events');
+----
+path	warehouse/events	1	4	-1	true
+
+query ITII
+SELECT endpoint_index, ticket, total_records, total_bytes
+FROM flight_info('fixture://events', ['warehouse', 'events']);
+----
+0	fixture-events	4	-1
+
+query TTI
+SELECT ticket, ticket_hex, ticket_size
+FROM flight_info('fixture://events', ['warehouse', 'events']);
+----
+fixture-events	666978747572652d6576656e7473	14
+
+query ITTTTTT
+SELECT field_index, field_name, arrow_type, duckdb_type, nullable::VARCHAR, metadata, supported::VARCHAR
+FROM flight_schema('fixture://events', ['warehouse', 'events'])
+ORDER BY field_index;
+----
+0	event_id	Int64	BIGINT	false	{}	true
+1	event_type	Utf8	VARCHAR	false	{}	true
+2	amount	Float64	DOUBLE	true	{}	true
+3	created_at	Timestamp(Microsecond, None)	TIMESTAMP	false	{}	true
+
+query ITT
+SELECT event_id, event_type, amount::VARCHAR
+FROM flight('fixture://events', ['warehouse', 'events'])
+ORDER BY event_id;
+----
+1	signup	NULL
+2	purchase	42.5
+3	purchase	9.99
+4	refund	-9.99
+
+query II
+SELECT count(*), count(DISTINCT event_type)
+FROM flight_scan('fixture://events', ['warehouse', 'events']);
+----
+4	3
+
+query IT
+SELECT event_id, event_type
+FROM flight_scan_ticket('fixture://events', 'fixture-events')
+WHERE event_type = 'purchase'
+ORDER BY event_id;
+----
+2	purchase
+3	purchase
+
+query IT
+SELECT event_id, event_type
+FROM flight_scan_ticket(
+  'fixture://events',
+  'fixture-events',
+  schema_descriptor := ['warehouse', 'events']
+)
+WHERE event_type = 'refund'
+ORDER BY event_id;
+----
+4	refund
+
+query IT
+SELECT event_id, event_type
+FROM flight_scan_ticket(
+  'fixture://events',
+  '666978747572652d6576656e7473',
+  ticket_encoding := 'hex',
+  schema_descriptor := ['warehouse', 'events']
+)
+WHERE event_type = 'signup'
+ORDER BY event_id;
+----
+1	signup
+
+statement error
+SELECT *
+FROM flight_scan_ticket(
+  'fixture://events',
+  'not-the-ticket',
+  schema_descriptor := ['warehouse', 'events']
+);
+----
+Binder Error
+
+query TTIIIT
+SELECT descriptor_type, descriptor, endpoint_count, total_records, total_bytes, ordered::VARCHAR
+FROM flight_list('fixture://seattle-weather');
+----
+path	public/seattle_weather	1	6	-1	true
+
+query ITTTTTT
+SELECT field_index, field_name, arrow_type, duckdb_type, nullable::VARCHAR, metadata, supported::VARCHAR
+FROM flight_schema('fixture://seattle-weather', ['public', 'seattle_weather'])
+ORDER BY field_index;
+----
+0	date	Date32	DATE	false	{}	true
+1	precipitation	Float64	DOUBLE	false	{}	true
+2	temp_max	Float64	DOUBLE	false	{}	true
+3	temp_min	Float64	DOUBLE	false	{}	true
+4	wind	Float64	DOUBLE	false	{}	true
+5	weather	Utf8	VARCHAR	false	{}	true
+
+query TTI
+SELECT date::VARCHAR, weather, count(*)
+FROM flight('fixture://seattle-weather', ['public', 'seattle_weather'])
+GROUP BY ALL
+ORDER BY date::VARCHAR
+LIMIT 3;
+----
+2012-01-01	drizzle	1
+2012-01-02	rain	1
+2012-01-03	rain	1
+
+query RR
+SELECT round(sum(precipitation), 1), round(avg(wind), 2)
+FROM flight_scan_ticket(
+  'fixture://seattle-weather',
+  'fixture-seattle-weather',
+  schema_descriptor := ['public', 'seattle_weather']
+);
+----
+33.3	4.05
+
+query TTIIIT
+SELECT descriptor_type, descriptor, endpoint_count, total_records, total_bytes, ordered::VARCHAR
+FROM flight_list('fixture://palmer-penguins');
+----
+path	bio/palmer_penguins	1	9	-1	true
+
+query ITTTTTT
+SELECT field_index, field_name, arrow_type, duckdb_type, nullable::VARCHAR, metadata, supported::VARCHAR
+FROM flight_schema('fixture://palmer-penguins', ['bio', 'palmer_penguins'])
+ORDER BY field_index;
+----
+0	species	Utf8	VARCHAR	false	{}	true
+1	island	Utf8	VARCHAR	false	{}	true
+2	bill_length_mm	Float64	DOUBLE	true	{}	true
+3	bill_depth_mm	Float64	DOUBLE	true	{}	true
+4	flipper_length_mm	Int64	BIGINT	true	{}	true
+5	body_mass_g	Int64	BIGINT	true	{}	true
+6	sex	Utf8	VARCHAR	true	{}	true
+7	year	Int64	BIGINT	false	{}	true
+
+query TIR
+SELECT species, count(*), round(avg(body_mass_g), 1)
+FROM flight('fixture://palmer-penguins', ['bio', 'palmer_penguins'])
+GROUP BY species
+ORDER BY species;
+----
+Adelie	3	3600.0
+Chinstrap	3	3683.3
+Gentoo	3	4883.3

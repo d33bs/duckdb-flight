@@ -217,13 +217,3 @@ Possible follow-up artifacts:
 
 - `ARCHITECTURE.md`: component boundaries and runtime choices.
 - `ROADMAP.md`: phased implementation checklist.
-
-## Project Mood
-
-Fast data pipes, tiny SQL surface, no ceremony.
-
-Bring the stream to DuckDB, ask the question, keep moving.
-
-Brand direction lives in the [Design Plan](docs/design.md#brand-and-logo-direction):
-a compact duck taking flight along an Arrow-like stream path, playful enough to
-remember and simple enough to trust.
